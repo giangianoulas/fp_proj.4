@@ -30,7 +30,7 @@ unit pj_prototypes;
 interface
 
 uses
-  Classes, SysUtils, pj_types, ctypes;
+  pj_types, ctypes;
 
 var
   (* procedure prototypes *)
@@ -43,7 +43,7 @@ var
   pj_geocentric_to_geodetic: function(a, es: cdouble; point_count: clong; point_offset: cint; x, y, z: pcdouble): cint; cdecl;
   pj_geodetic_to_geocentric: function(a, es: cdouble; point_count: clong; point_offset: cint; x, y, z: pcdouble): cint; cdecl;
   pj_compare_datums: function(srcdefn: projPJ; dstdefn: projPJ): cint; cdecl;
-  pj_apply_gridshift: function(ctx: projCTX; c: PChar; i: cint; point_count: clong; point_offset: cint; x, y, z: pcdouble): cint; cdecl;
+  pj_apply_gridshift: function(ctx: projCTX; c: PJ_CSTR; i: cint; point_count: clong; point_offset: cint; x, y, z: pcdouble): cint; cdecl;
 
   pj_deallocate_grids: procedure; cdecl;
   pj_clear_initcache: procedure; cdecl;
@@ -53,20 +53,20 @@ var
   pj_pr_list: procedure(proj: projPJ); cdecl;
   pj_free: procedure(proj: projPJ); cdecl;
   pj_set_finder: procedure(finder: TprojFinder); cdecl;
-  pj_set_searchpath: procedure(Count: cint; path: ppchar); cdecl;
-  pj_init: function(argc: cint; argv: ppchar): projPJ; cdecl;
-  pj_init_plus: function(args: PChar): projPJ; cdecl;
-  pj_init_ctx: function(ctx: projCtx; argc: cint; argv: ppchar): projPJ; cdecl;
-  pj_init_plus_ctx: function(ctx: projCtx; args: PChar): projPJ; cdecl;
-  pj_get_def: function(proj: projPJ; i: cint): PChar; cdecl;
+  pj_set_searchpath: procedure(Count: cint; path: PPJ_CSTR); cdecl;
+  pj_init: function(argc: cint; argv: PPJ_CSTR): projPJ; cdecl;
+  pj_init_plus: function(args: PJ_CSTR): projPJ; cdecl;
+  pj_init_ctx: function(ctx: projCtx; argc: cint; argv: PPJ_CSTR): projPJ; cdecl;
+  pj_init_plus_ctx: function(ctx: projCtx; args: PJ_CSTR): projPJ; cdecl;
+  pj_get_def: function(proj: projPJ; i: cint): PJ_CSTR; cdecl;
   pj_latlong_from_proj: function(proj: projPJ): projPJ; cdecl;
   pj_malloc: function(size: csize_t): pointer; cdecl;
   pj_dalloc: procedure(ptr: pointer); cdecl;
   pj_calloc: function(n: csize_t; size: csize_t): pointer cdecl;
   pj_dealloc: function(ptr: pointer): pointer cdecl;
-  pj_strerrno: function(err: cint): PChar; cdecl;
+  pj_strerrno: function(err: cint): PJ_CSTR; cdecl;
   pj_get_errno_ref: function: pcint; cdecl;
-  pj_get_release: function: PChar; cdecl;
+  pj_get_release: function: PJ_CSTR; cdecl;
   pj_errno: function: cint; cdecl;
   pj_acquire_lock: procedure; cdecl;
   pj_release_lock: procedure; cdecl;
@@ -84,20 +84,23 @@ var
   pj_ctx_get_app_data: function(ctx: projCtx): pointer; cdecl;
   pj_ctx_set_fileapi: procedure(ctx: projCtx; api: PprojFileAPI); cdecl;
   pj_ctx_get_fileapi: function(ctx: projCtx): PprojFileAPI; cdecl;
-  pj_log: procedure(ctx: projCtx; level: integer; fmt: PChar; Args: Pointer); cdecl;
-  pj_stderr_logger: procedure(a: Pointer; i: integer; c: PChar); cdecl;
+  pj_log: procedure(ctx: projCtx; level: integer; fmt: PJ_CSTR; Args: Pointer); cdecl;
+  pj_stderr_logger: procedure(a: Pointer; i: integer; c: PJ_CSTR); cdecl;
   pj_get_default_fileapi: function: PprojFileAPI; cdecl;
-  pj_ctx_fopen: function(ctx: projCtx; filename, access: PChar): PAFile; cdecl;
+  pj_ctx_fopen: function(ctx: projCtx; filename, access: PJ_CSTR): PAFile; cdecl;
   pj_ctx_fread: function(ctx: projCtx; buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t; cdecl;
   pj_ctx_fseek: function(ctx: projCtx; file_: PAFile; offset: clong; whence: integer): integer; cdecl;
   pj_ctx_ftell: function(ctx: projCtx; file_: PAFile): clong; cdecl;
   pj_ctx_fclose: procedure(ctx: projCtx; file_: PAFile); cdecl;
-  pj_ctx_fgets: function(ctx: projCtx; line: PChar; size: integer; file_: PAFile): PChar; cdecl;
-  pj_open_lib: function(ctx: projCtx; Name, mode: PChar): PAFile; cdecl;
+  pj_ctx_fgets: function(ctx: projCtx; line: PJ_CSTR; size: integer; file_: PAFile): PJ_CSTR; cdecl;
+  pj_open_lib: function(ctx: projCtx; Name, mode: PJ_CSTR): PAFile; cdecl;
+
+  pj_get_list_ref: function:pointer; cdecl;
+  pj_error: function(P: PJ): cint; cdecl;
 
 {
-  pj_create: function(definition: PChar): PJ; cdecl;
-  pj_create_argv: function(argc: cint; argv: PPChar): PJ; cdecl;
+  pj_create: function(definition: PJ_CSTR): PJ; cdecl;
+  pj_create_argv: function(argc: cint; argv: PPJ_CSTR): PJ; cdecl;
   pj_freePJ: procedure(P: PJ); cdecl;
   pj_error: function(P: PJ): cint; cdecl;
   pj_trans: function(P: PJ; direction: pj_direction; obs: PJ_OBS): PJ_OBS; cdecl;

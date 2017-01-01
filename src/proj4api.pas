@@ -44,75 +44,92 @@ type
     LibHandle: TLibHandle;
     LibFilename: string;
     libVersion: string;
+    function geterrorstr: string;
+    function LoadProjLibrary: boolean;
   public
     { public declarations }
+    {default constructor}
     constructor Create; overload;
+    {constructor with absolute path to dynamic lib}
     constructor Create(libpath: string); overload;
     destructor Destroy; override;
-    function LoadProjLibrary: boolean;
     procedure ReleaseProjLibrary;
     procedure ConvertLocalToTarget(inputProj, outProj: string; out x, y: double);
     property libraryVersion: string read libVersion;
     property libraryFilename: string read LibFilename write LibFilename;
+    property GetLastError: string read geterrorstr;
     function fwd(val: projLP; proj: projPJ): projXY;
     function inv(val: projXY; proj: projPJ): projLP;
     function fwd3d(val: projLPZ; proj: projPJ): projXYZ;
     function inv3d(val: projXYZ; proj: projPJ): projLPZ;
-    function transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y, z: double): integer;
-    function datum_transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y, z: double): integer;
-    function geocentric_to_geodetic(a, es: double; point_count: longint; point_offset: integer; out x, y, z: double): integer;
-    function geodetic_to_geocentric(a, es: double; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+    {Transform the x/y/z points from the source coordinate system to the destination coordinate system}
+    function transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y: double; z: double = 0): integer;
+    function datum_transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y: double; z: double = 0): integer;
+    function geocentric_to_geodetic(a, es: double; point_count: longint; point_offset: integer; out x, y: double; z: double = 0): integer;
+    function geodetic_to_geocentric(a, es: double; point_count: longint; point_offset: integer; out x, y: double; z: double = 0): integer;
     function compare_datums(srcdefn: projPJ; dstdefn: projPJ): integer;
-    function apply_gridshift(ctx: projCTX; c: string; i: integer; point_count: longint; point_offset: integer; out x, y, z: double): integer;
-
+    function apply_gridshift(ctx: projCTX; c: string; i: integer; point_count: longint; point_offset: integer;
+      out x, y: double; z: double = 0): integer;
+    {Frees all resources associated with loaded and cached datum shift grids.}
     procedure deallocate_grids;
     procedure clear_initcache;
-    function is_latlong(proj: projPJ): integer;
-    function is_geocent(proj: projPJ): integer;
+    {Returns TRUE if the passed coordinate system is geographic (proj=latlong).}
+    function is_latlong(proj: projPJ): boolean;
+    function is_geocent(proj: projPJ): boolean;
     procedure get_spheroid_defn(defn: projPJ; major_axis, eccentricity_squared: double);
     procedure pr_list(proj: projPJ);
+    {Frees all resources associated with pj.}
     procedure FreePJ(proj: projPJ);
+    {Install a custom function for finding init and grid shift files.}
     procedure set_finder(finder: TprojFinder);
+    {Set a list of directories to search for init and grid shift files.}
     procedure set_searchpath(Count: integer; path: string);
+    procedure set_searchpath(Count: integer; path: PPJ_CSTR);
     function init(argc: integer; argv: string): projPJ;
+    {This function converts a string representation of a coordinate system definition into a projPJ object }
     function init_plus(args: string): projPJ;
-    function init_ctx(ctx: projCtx; argc: integer; argv: string): projPJ;
-    function init_plus_ctx(ctx: projCtx; args: string): projPJ;
+    // function init_ctx(ctx: projCtx; argc: integer; argv: string): projPJ;
+    // function init_plus_ctx(ctx: projCtx; args: string): projPJ;
+    {Returns the PROJ.4 initialization string suitable for use with pj_init_plus()}
     function get_def(proj: projPJ; i: integer): string;
+    {Returns a new coordinate system definition which is the geographic coordinate (lat/long) system underlying}
     function latlong_from_proj(proj: projPJ): projPJ;
     function malloc(size: csize_t): pointer;
     procedure dalloc(ptr: pointer);
     function calloc(n: csize_t; size: csize_t): pointer;
     function dealloc(ptr: pointer): pointer;
+    {Returns the error text associated with the passed in error code.}
     function strerrno(err: integer): string;
+    {Returns a pointer to the global pj_errno error variable.}
     function get_errno_ref: integer;
+    {Returns an internal string describing the release version.}
     function get_release: string;
-    procedure acquire_lock;
-    procedure release_lock;
-    procedure cleanup_lock;
-    function get_default_ctx: projCTX;
-    function get_ctx(proj: projPJ): projCtx;
-    procedure set_ctx(proj: projPJ; ctx: projCtx);
-    function ctx_alloc: projCtx;
-    procedure ctx_free(ctx: projCtx);
-    function ctx_get_errno(ctx: projCtx): integer;
-    procedure ctx_set_errno(ctx: projCtx; no: integer);
-    procedure ctx_set_debug(ctx: projCtx; no: integer);
-    procedure ctx_set_logger(ctx: projCtx; logger: Tprojlogger);
-    procedure ctx_set_app_data(ctx: projCtx; ptr: pointer);
-    function ctx_get_app_data(ctx: projCtx): pointer;
-    procedure ctx_set_fileapi(ctx: projCtx; api: PprojFileAPI);
-    function ctx_get_fileapi(ctx: projCtx): PprojFileAPI;
-    procedure log(ctx: projCtx; level: integer; fmt: string; Args: array of const);
-    procedure stderr_logger(a: Pointer; i: integer; c: string);
-    function get_default_fileapi: PprojFileAPI;
-    function ctx_fopen(ctx: projCtx; filename, access: string): PAFile;
-    function ctx_fread(ctx: projCtx; buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t;
-    function ctx_fseek(ctx: projCtx; file_: PAFile; offset: longint; whence: integer): integer;
-    function ctx_ftell(ctx: projCtx; file_: PAFile): longint;
-    procedure ctx_fclose(ctx: projCtx; file_: PAFile);
-    function ctx_fgets(ctx: projCtx; line: string; size: integer; file_: PAFile): string;
-    function open_lib(ctx: projCtx; Name, mode: string): PAFile;
+    //   procedure acquire_lock;
+    //   procedure release_lock;
+    //   procedure cleanup_lock;
+    //    function get_default_ctx: projCTX;
+    //   function get_ctx(proj: projPJ): projCtx;
+    //   procedure set_ctx(proj: projPJ; ctx: projCtx);
+    //   function ctx_alloc: projCtx;
+    //  procedure ctx_free(ctx: projCtx);
+    //   function ctx_get_errno(ctx: projCtx): integer;
+    //   procedure ctx_set_errno(ctx: projCtx; no: integer);
+    //  procedure ctx_set_debug(ctx: projCtx; no: integer);
+    //  procedure ctx_set_logger(ctx: projCtx; logger: Tprojlogger);
+    //  procedure ctx_set_app_data(ctx: projCtx; ptr: pointer);
+    //  function ctx_get_app_data(ctx: projCtx): pointer;
+    //   procedure ctx_set_fileapi(ctx: projCtx; api: PprojFileAPI);
+    //   function ctx_get_fileapi(ctx: projCtx): PprojFileAPI;
+    //   procedure log(ctx: projCtx; level: integer; fmt: string; Args: array of const);
+    //   procedure stderr_logger(a: Pointer; i: integer; c: string);
+    //  function get_default_fileapi: PprojFileAPI;
+    //   function ctx_fopen(ctx: projCtx; filename, access: string): PAFile;
+    //   function ctx_fread(ctx: projCtx; buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t;
+    //   function ctx_fseek(ctx: projCtx; file_: PAFile; offset: longint; whence: integer): integer;
+    //  function ctx_ftell(ctx: projCtx; file_: PAFile): longint;
+    //   procedure ctx_fclose(ctx: projCtx; file_: PAFile);
+    //   function ctx_fgets(ctx: projCtx; line: string; size: integer; file_: PAFile): string;
+    //   function open_lib(ctx: projCtx; Name, mode: string): PAFile;
 
     //   pj_errno: function: cint; cdecl;
   end;
@@ -124,7 +141,7 @@ implementation
 function TProj4.LoadProjLibrary: boolean;
 begin
   Result := False;
-  LibHandle := LoadLibrary(PChar(LibFilename));
+  LibHandle := LoadLibrary(ansistring(LibFilename));
   if LibHandle = 0 then
     RaiseLastOsError;
   Pointer(pj_fwd) := GetProcAddress(LibHandle, 'pj_fwd');
@@ -182,6 +199,10 @@ begin
   Pointer(pj_ctx_fclose) := GetProcAddress(LibHandle, 'pj_ctx_fclose');
   Pointer(pj_ctx_fgets) := GetProcAddress(LibHandle, 'pj_ctx_fgets');
   Pointer(pj_open_lib) := GetProcAddress(LibHandle, 'pj_open_lib');
+  Pointer(pj_get_list_ref) := GetProcAddress(LibHandle, 'pj_get_list_ref');
+  Pointer(pj_get_errno_ref) := GetProcAddress(LibHandle, 'pj_get_errno_ref');
+
+
 
   {
   Pointer(pj_create) := GetProcAddress(LibHandle, 'pj_create');
@@ -209,8 +230,8 @@ begin
     Assigned(pj_ctx_set_debug) and Assigned(pj_ctx_set_app_data) and Assigned(pj_ctx_get_app_data) and
     Assigned(pj_ctx_set_logger) and Assigned(pj_ctx_set_fileapi) and Assigned(pj_ctx_get_fileapi) and Assigned(pj_log) and
     Assigned(pj_stderr_logger) and Assigned(pj_ctx_fopen) and Assigned(pj_ctx_fread) and Assigned(pj_ctx_fseek) and
-    Assigned(pj_ctx_ftell) and Assigned(pj_ctx_fclose) and Assigned(pj_ctx_fgets) and Assigned(pj_open_lib){ and
-    Assigned(pj_create) and
+    Assigned(pj_ctx_ftell) and Assigned(pj_ctx_fclose) and Assigned(pj_ctx_fgets) and Assigned(pj_open_lib) and
+    Assigned(pj_get_list_ref) and Assigned(pj_get_errno_ref){ and
     Assigned(pj_create_argv) and
     Assigned(pj_freePJ) and
     Assigned(pj_error) and
@@ -220,8 +241,7 @@ begin
     Assigned(pj_xy_dist) and
     Assigned(pj_xyz_dist) and
     Assigned(pj_err_level)
-}
-) then
+}) then
     raise Exception.Create('Unsupported proj4 library version');
   Result := True;
 end;
@@ -235,20 +255,25 @@ begin
   end;
 end;
 
+function TProj4.geterrorstr: string;
+begin
+  Result := strerrno(get_errno_ref);
+end;
+
 constructor TProj4.Create;
 var
   loadstat: boolean;
 begin
   inherited Create;
   {$IF Defined(WINDOWS)}
-  LibFilename := 'proj.dll';
+  LibFilename := 'libproj.dll';
   {$ELSEIF Defined(UNIX)}
-  LibFilename := 'proj4/libproj.so.12.0.0';
+  LibFilename := 'libproj.so';
   {$ENDIF}
   LibHandle := 0;
   loadstat := LoadProjLibrary;
   if loadstat then
-    libVersion := StrPas(pj_get_release());
+    libVersion := ansistring(pj_get_release());
 end;
 
 constructor TProj4.Create(libpath: string);
@@ -260,7 +285,7 @@ begin
   LibHandle := 0;
   loadstat := LoadProjLibrary;
   if loadstat then
-    libVersion := StrPas(pj_get_release());
+    libVersion := ansistring(pj_get_release());
 end;
 
 destructor TProj4.Destroy;
@@ -276,8 +301,8 @@ var
 begin
   inp := nil;
   outp := nil;
-  inp := pj_init_plus(PChar(inputProj));
-  outp := pj_init_plus(PChar(outProj));
+  inp := pj_init_plus(PAnsiChar(inputProj));
+  outp := pj_init_plus(PAnsiChar(outProj));
   if inp = nil then
   begin
     x := -1;
@@ -319,22 +344,22 @@ begin
   Result := pj_inv3d(val, proj);
 end;
 
-function TProj4.transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+function TProj4.transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y: double; z: double): integer;
 begin
   Result := pj_transform(src, dst, point_count, point_offset, @x, @y, @z);
 end;
 
-function TProj4.datum_transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+function TProj4.datum_transform(src, dst: projPJ; point_count: longint; point_offset: integer; out x, y: double; z: double): integer;
 begin
   Result := pj_datum_transform(src, dst, point_count, point_offset, @x, @y, @z);
 end;
 
-function TProj4.geocentric_to_geodetic(a, es: double; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+function TProj4.geocentric_to_geodetic(a, es: double; point_count: longint; point_offset: integer; out x, y: double; z: double): integer;
 begin
   Result := pj_geocentric_to_geodetic(a, es, point_count, point_offset, @x, @y, @z);
 end;
 
-function TProj4.geodetic_to_geocentric(a, es: double; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+function TProj4.geodetic_to_geocentric(a, es: double; point_count: longint; point_offset: integer; out x, y: double; z: double): integer;
 begin
   Result := pj_geodetic_to_geocentric(a, es, point_count, point_offset, @x, @y, @z);
 end;
@@ -344,9 +369,10 @@ begin
   Result := pj_compare_datums(srcdefn, dstdefn);
 end;
 
-function TProj4.apply_gridshift(ctx: projCTX; c: string; i: integer; point_count: longint; point_offset: integer; out x, y, z: double): integer;
+function TProj4.apply_gridshift(ctx: projCTX; c: string; i: integer; point_count: longint; point_offset: integer;
+  out x, y: double; z: double): integer;
 begin
-  Result := pj_apply_gridshift(ctx, PChar(c), i, point_count, point_offset, @x, @y, @z);
+  Result := pj_apply_gridshift(ctx, PAnsiChar(c), i, point_count, point_offset, @x, @y, @z);
 end;
 
 procedure TProj4.deallocate_grids;
@@ -359,14 +385,18 @@ begin
   pj_clear_initcache();
 end;
 
-function TProj4.is_latlong(proj: projPJ): integer;
+function TProj4.is_latlong(proj: projPJ): boolean;
 begin
-  Result := pj_is_latlong(proj);
+  Result := False;
+  if pj_is_latlong(proj) = 1 then
+    Result := True;
 end;
 
-function TProj4.is_geocent(proj: projPJ): integer;
+function TProj4.is_geocent(proj: projPJ): boolean;
 begin
-  Result := pj_is_geocent(proj);
+  Result := False;
+  if pj_is_geocent(proj) = 1 then
+    Result := True;
 end;
 
 procedure TProj4.get_spheroid_defn(defn: projPJ; major_axis, eccentricity_squared: double);
@@ -394,6 +424,11 @@ begin
   pj_set_searchpath(Count, StringToPPChar(path, 0));
 end;
 
+procedure TProj4.set_searchpath(Count: integer; path: PPJ_CSTR);
+begin
+  pj_set_searchpath(Count, path);
+end;
+
 function TProj4.init(argc: integer; argv: string): projPJ;
 begin
   Result := pj_init(argc, StringToPPChar(argv, 0));
@@ -401,9 +436,10 @@ end;
 
 function TProj4.init_plus(args: string): projPJ;
 begin
-  Result := pj_init_plus(PChar(args));
+  Result := pj_init_plus(PAnsiChar(args));
 end;
 
+{
 function TProj4.init_ctx(ctx: projCtx; argc: integer; argv: string): projPJ;
 begin
   Result := pj_init_ctx(ctx, argc, StringToPPChar(argv, 0));
@@ -411,12 +447,13 @@ end;
 
 function TProj4.init_plus_ctx(ctx: projCtx; args: string): projPJ;
 begin
-  Result := pj_init_plus_ctx(ctx, PChar(args));
+  Result := pj_init_plus_ctx(ctx, PAnsiChar(args));
 end;
+}
 
 function TProj4.get_def(proj: projPJ; i: integer): string;
 begin
-  Result := StrPas(pj_get_def(proj, i));
+  Result := ansistring(pj_get_def(proj, i));
 end;
 
 function TProj4.latlong_from_proj(proj: projPJ): projPJ;
@@ -446,7 +483,7 @@ end;
 
 function TProj4.strerrno(err: integer): string;
 begin
-  Result := StrPas(pj_strerrno(err));
+  Result := ansistring(pj_strerrno(err));
 end;
 
 function TProj4.get_errno_ref: integer;
@@ -459,9 +496,10 @@ end;
 
 function TProj4.get_release: string;
 begin
-  Result := StrPas(pj_get_release());
+  Result := ansistring(pj_get_release());
 end;
 
+{
 procedure TProj4.acquire_lock;
 begin
   pj_acquire_lock;
@@ -559,14 +597,14 @@ begin
     El^ := DWORD(P);
     Inc(El);
   end;
-  pj_log(ctx, level, PChar(fmt), Pointer(ElsArray));
+  pj_log(ctx, level, PAnsiChar(fmt), Pointer(ElsArray));
   if ElsArray <> nil then
     FreeMem(ElsArray);
 end;
 
 procedure TProj4.stderr_logger(a: Pointer; i: integer; c: string);
 begin
-  pj_stderr_logger(a, i, PChar(c));
+  pj_stderr_logger(a, i, PAnsiChar(c));
 end;
 
 function TProj4.get_default_fileapi: PprojFileAPI;
@@ -576,7 +614,7 @@ end;
 
 function TProj4.ctx_fopen(ctx: projCtx; filename, access: string): PAFile;
 begin
-  Result := pj_ctx_fopen(ctx, PChar(filename), PChar(access));
+  Result := pj_ctx_fopen(ctx, PAnsiChar(filename), PAnsiChar(access));
 end;
 
 function TProj4.ctx_fread(ctx: projCtx; buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t;
@@ -601,12 +639,12 @@ end;
 
 function TProj4.ctx_fgets(ctx: projCtx; line: string; size: integer; file_: PAFile): string;
 begin
-  Result := StrPas(pj_ctx_fgets(ctx, PChar(line), size, file_));
+  Result := ansistring(pj_ctx_fgets(ctx, PAnsiChar(line), size, file_));
 end;
 
 function TProj4.open_lib(ctx: projCtx; Name, mode: string): PAFile;
 begin
-  Result := pj_open_lib(ctx, PChar(Name), PChar(mode));
+  Result := pj_open_lib(ctx, PAnsiChar(Name), PAnsiChar(mode));
 end;
-
+ }
 end.

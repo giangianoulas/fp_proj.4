@@ -30,13 +30,21 @@ unit pj_types;
 interface
 
 uses
-  Classes, SysUtils, ctypes;
+  ctypes;
 
 const
   RAD_TO_DEG = 57.29577951308232;
   DEG_TO_RAD = 0.0174532925199432958;
+  PJ_IO_UNITS_CLASSIC = 0;
+  PJ_IO_UNITS_METERS = 1;
+  PJ_IO_UNITS_RADIANS = 2;
+  MAX_TAB_ID = 80;
 
 type
+  PJ_CSTR = PAnsiChar;
+  PPJ_CSTR = ^PAnsiChar;
+
+  {$PackRecords 1}
   projUV = record
     u, v: cdouble;
   end;
@@ -45,7 +53,8 @@ type
     u, v, w: cdouble;
   end;
 
-  projPJ = pointer;
+  projPJ = ^TPJconsts;//pointer;
+
   projXY = projUV;
   projLP = projUV;
   projXYZ = projUVW;
@@ -53,13 +62,13 @@ type
   projCTX = pointer;
 
   PAFile = ^integer;
-  TprojFinder = function(s: PChar): PChar of object;
-  Tprojlogger = procedure(ptr: pointer; n: cint; s: PChar) of object;
-  TProjFopen = function(ctx: projCTX; filename, access: PChar): PAFile of object;
-  TProjFRead = function(buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t of object;
-  TProjFSeek = function(file_: PAFile; offset: clong; whence: integer): integer of object;
-  TProjFtell = function(file_: PAFile): clong of object;
-  TProjFClose = procedure(file_: PAFile) of object;
+  TprojFinder = function(s: pj_cstr): pj_cstr of object;
+  Tprojlogger = procedure(ptr: pointer; n: cint; s: pj_cstr) of object;
+  TProjFopen = function(ctx: projCTX; filename, access: pj_cstr): PAFile; cdecl;
+  TProjFRead = function(buffer: Pointer; size, nmemb: csize_t; file_: PAFile): csize_t; cdecl;
+  TProjFSeek = function(file_: PAFile; offset: clong; whence: integer): integer; cdecl;
+  TProjFtell = function(file_: PAFile): clong;
+  TProjFClose = procedure(file_: PAFile); cdecl;
 
   projFileAPI = record
     fopen: TProjFopen;
@@ -69,69 +78,89 @@ type
     fclose: TProjFClose;
   end;
   PprojFileAPI = ^projFileAPI;
-  {
+
+  PprojCtx_t = ^projCtx_t;
+
+  projCtx_t = record
+    last_errno: integer;
+    debug_level: integer;
+    logger: procedure(_para1: pointer; _para2: longint; _para3: pj_cstr); cdecl;
+    app_data: Pointer;
+    fileapi: PprojFileAPI;
+  end;
+
+  Pgeod_geodesic = ^Tgeod_geodesic;
+  Tgeod_geodesic = record
+    {undefined structure}
+  end;
+
+  Ppj_opaque = ^Tpj_opaque;
+  Tpj_opaque = record
+    {undefined structure}
+  end;
+
   {proj.h}
   { Omega, Phi, Kappa: Rotations }
   PJ_OPK = record
-    o, p, k: cdouble;
+    o, p, k: cDouble;
   end;
   {/* Easting, Northing, and some kind of height (orthometric or ellipsoidal) */}
 
   PJ_ENH = record
-    e, n, h: cdouble;
+    e, n, h: cDouble;
   end;
 
   PJ_XYZT = record
-    x, y, z, t: cdouble;
+    x, y, z, t: cDouble;
   end;
 
   PJ_ENHT = record
-    e, n, h, t: cdouble;
+    e, n, h, t: cDouble;
   end;
 
   PJ_UVWT = record
-    u, v, w, t: cdouble;
+    u, v, w, t: cDouble;
   end;
 
   PJ_LPZT = record
-    lam, phi, z, t: cdouble;
+    lam, phi, z, t: cDouble;
   end;
 
   UV = record
-    u, v: cdouble;
+    u, v: cDouble;
   end;
 
   XY = record
-    x, y: cdouble;
+    x, y: cDouble;
   end;
 
   LP = record
-    lam, phi: cdouble;
+    lam, phi: cDouble;
   end;
 
   XYZ = record
-    x, y, z: cdouble;
+    x, y, z: cDouble;
   end;
 
   UVW = record
-    u, v, w: cdouble;
+    u, v, w: cDouble;
   end;
 
   LPZ = record
-    lam, phi, z: cdouble
+    lam, phi, z: cDouble
   end;
   {/* Degrees, minutes, and seconds */}
   PJ_DMS = record
-    d, m, s: cdouble;
+    d, m, s: cDouble;
   end;
   {/* Geoid undulation (N) and deflections of the vertical (eta, zeta) */}
   PJ_EZN = record
-    e, z, N: cdouble;
+    e, z, N: cDouble;
   end;
 
   {/* Ellipsoidal parameters */}
   PJ_AF = record
-    a, f: cdouble;
+    a, f: cDouble;
   end;
 
   pj_direction = (
@@ -141,14 +170,14 @@ type
     );
 
   pj_log_level = (
-    PJ_LOG_NONE  = 0,
+    PJ_LOG_NONE = 0,
     PJ_LOG_ERROR = 1,
     PJ_LOG_DEBUG = 2,
     PJ_LOG_TRACE = 3,
-    PJ_LOG_TELL  = 4,
+    PJ_LOG_TELL = 4,
     PJ_LOG_DEBUG_MAJOR = 2, { for proj_api.h compatibility }
     PJ_LOG_DEBUG_MINOR = 3  { for proj_api.h compatibility }
-  );
+    );
 
   PJ_COORD = record
     xyzt: PJ_XYZT;
@@ -156,7 +185,7 @@ type
     enht: PJ_ENHT;
     lpzt: PJ_LPZT;
     enh: PJ_ENH;
-    v: array [0..3] of cdouble; { It's just a vector }
+    v: array [0..3] of cDouble; { It's just a vector }
     xyz: XYZ;
     uvw: UVW;
     lpz: LPZ;
@@ -170,7 +199,7 @@ type
     enh: PJ_ENH;
     ezn: PJ_EZN;
     dms: PJ_DMS;
-    v: array [0..2] of cdouble; { It's just a vector }
+    v: array [0..2] of cDouble; { It's just a vector }
     xyz: XYZ;
     lpz: LPZ;
     uvw: UVW;
@@ -185,7 +214,7 @@ type
     lp: LP;
     uv: UV;
     af: PJ_AF;
-    v: array [0..1] of cdouble; { It's just a vector }
+    v: array [0..1] of cDouble; { It's just a vector }
   end;
 
   PJ_OBS = record
@@ -197,12 +226,213 @@ type
 
   PJ_FILE = ^cint;
 
-  PJ = pointer;
+  PJ = ^TPJconsts;//pointer;
 
-  }
+  { derivatives of x for lambda-phi  }
+  { derivatives of y for lambda-phi  }
+  PDERIVS = ^TDERIVS;
+
+  TDERIVS = record
+    x_l: double;
+    x_p: double;
+    y_l: double;
+    y_p: double;
+  end;
+
+  { parameter list  }
+  { LEFT: Radians     RIGHT: Scaled meters  }
+  { Meters   }
+  { Radians  }
+  Ppj_io_units = ^Tpj_io_units;
+  Tpj_io_units = longint;
+
+  { meridional, parallel scales  }
+  { angular distortion, theta prime  }
+  { convergence  }
+  { areal scale factor  }
+  { max-min scale error  }
+  { info as to analytics, see following  }
+  PFACTORS = ^TFACTORS;
+
+  TFACTORS = record
+    der: TDERIVS;
+    h: double;
+    k: double;
+    omega: double;
+    thetap: double;
+    conv: double;
+    s: double;
+    a: double;
+    b: double;
+    code: longint;
+  end;
+
+  PPJ_REGION = ^TPJ_REGION;
+
+  TPJ_REGION = record
+    ll_long: double;
+    ll_lat: double;
+    ur_long: double;
+    ur_lat: double;
+  end;
+
+  PFLP = ^TFLP;
+
+  TFLP = record
+    lam: single;
+    phi: single;
+  end;
+
+  PILP = ^TILP;
+
+  TILP = record
+    lam: longint;
+    phi: longint;
+  end;
+
+  { conversion matrix  }
+  PCTABLE = ^TCTABLE;
+
+  TCTABLE = record
+    id: array[0..(MAX_TAB_ID) - 1] of char;
+    ll: LP;
+    del: LP;
+    lim: TILP;
+    cvs: PFLP;
+  end;
+
+  P_pj_gi = ^T_pj_gi;
+
+  T_pj_gi = record
+    gridname: pj_cstr;
+    filename: pj_cstr;
+    format: pj_cstr;
+    grid_offset: longint;
+    must_swap: longint;
+    ct: PCTABLE;
+    Next: P_pj_gi;
+    child: P_pj_gi;
+  end;
+  TPJ_GRIDINFO = T_pj_gi;
+  PPJ_GRIDINFO = ^TPJ_GRIDINFO;
+
+  PPJ_GridCatalogEntry = ^TPJ_GridCatalogEntry;
+
+  TPJ_GridCatalogEntry = record
+    region: TPJ_Region;
+    priority: longint;
+    date: double;
+    definition: pj_cstr;
+    gridinfo: PPJ_GRIDINFO;
+    available: longint;
+  end;
+  { maximum extent of catalog data  }
+
+  P_PJ_GridCatalog = ^T_PJ_GridCatalog;
+
+  T_PJ_GridCatalog = record
+    catalog_name: pj_cstr;
+    region: TPJ_Region;
+    entry_count: longint;
+    entries: PPJ_GridCatalogEntry;
+    Next: P_PJ_GridCatalog;
+  end;
+  TPJ_GridCatalog = T_PJ_GridCatalog;
+  PPJ_GridCatalog = ^TPJ_GridCatalog;
+
+  paralist = ^ARG_list;
+
+  ARG_list = record
+    Next: paralist;
+    used: char;
+    param: char;
+  end;
+
+
+  PPJconsts = ^TPJconsts;
+  PPJ = PPJconsts;
+
+  TPJconsts = record
+    ctx: PprojCtx_t;
+    descr: pj_cstr;
+    params: paralist;
+    geod: Pgeod_geodesic;
+    opaque: Ppj_opaque;
+    fwd: function(_para1: LP; _para2: PPJ): XY; cdecl;
+    inv: function(_para1: XY; _para2: PPJ): LP; cdecl;
+    fwd3d: function(_para1: LPZ; _para2: PPJ): XYZ; cdecl;
+    inv3d: function(_para1: XYZ; _para2: PPJ): LPZ; cdecl;
+    fwdobs: function(_para1: PJ_OBS; _para2: PPJ): PJ_OBS; cdecl;
+    invobs: function(_para1: PJ_OBS; _para2: PPJ): PJ_OBS; cdecl;
+    spc: procedure(_para1: LP; _para2: PPJ; _para3: PFACTORS); cdecl;
+    pfree: procedure(_para1: PPJ); cdecl;
+    a: double;
+    b: double;
+    ra: double;
+    rb: double;
+    alpha: double;
+    e: double;
+    es: double;
+    e2: double;
+    e2s: double;
+    e3: double;
+    e3s: double;
+    one_es: double;
+    rone_es: double;
+    f: double;
+    f2: double;
+    n: double;
+    rf: double;
+    rf2: double;
+    rn: double;
+    J: double;
+    es_orig: double;
+    a_orig: double;
+    over: longint;
+    geoc: longint;
+    is_latlong: longint;
+    is_geocent: longint;
+    left: Tpj_io_units;
+    right: Tpj_io_units;
+    lam0: double;
+    phi0: double;
+    x0: double;
+    y0: double;
+    k0: double;
+    to_meter: double;
+    fr_meter: double;
+    vto_meter: double;
+    vfr_meter: double;
+    datum_type: longint;
+    datum_params: array[0..6] of double;
+    gridlist: ^P_pj_gi;
+    gridlist_count: longint;
+    has_geoid_vgrids: longint;
+    vgridlist_geoid: ^P_pj_gi;
+    vgridlist_geoid_count: longint;
+    from_greenwich: double;
+    long_wrap_center: double;
+    is_long_wrap_set: longint;
+    axis: array[0..3] of char;
+    catalog_name: pj_cstr;
+    catalog: P_PJ_GridCatalog;
+    datum_date: double;
+    last_before_grid: P_pj_gi;
+    last_before_region: TPJ_Region;
+    last_before_date: double;
+    last_after_grid: P_pj_gi;
+    last_after_region: TPJ_Region;
+    last_after_date: double;
+  end;
+
+  PPJ_LIST = ^PJ_LIST;
+  PJ_LIST = record
+    id: pj_cstr;
+    proj:function(prj:PJ):PJ; cdecl;
+    descr: pj_cstr;
+  end;
+
+  {$PackRecords default}
 implementation
 
 end.
-
-
-
